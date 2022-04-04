@@ -18,8 +18,6 @@ print(r.content)
 
 #gsm.sms.send("1234567890","hi there")
 
-#gsm.sms.send("6502418790","hi there")
-
 data = {
     "lon": 123.456,
     "lat":234.567
