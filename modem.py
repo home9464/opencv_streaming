@@ -1,11 +1,24 @@
 
 """
 https://github.com/pythings/Drivers/blob/master/SIM800L.py
+
+AT+SAPBR=3,1,"CONTYPE","GPRS"
+AT+SAPBR=3,1,"APN","internet"
+AT+SAPBR=3,1,"USER","ooredoo"
+AT+SAPBR=3,1,"PWD","ooredoo"
+AT+SAPBR=1,1
+AT+SAPBR=2,1
+AT+HTTPINIT
+AT+HTTPPARA="CID",1
+AT+HTTPPARA="URL","http://www.1genomics.com"
+AT+HTTPACTION=0
+
 """
 
 # Imports
 import time
 import json
+from typing import List
 
 import serial
 
@@ -43,40 +56,13 @@ class Response(object):
         self.content     = content
 
 
-class Modem(object):
-
-    #def __init__(self, uart=None, MODEM_PWKEY_PIN=None, MODEM_RST_PIN=None, MODEM_POWER_ON_PIN=None, MODEM_TX_PIN=None, MODEM_RX_PIN=None):
+class Modem:
     def __init__(self, sim_device='/dev/serial0'):
         self.initialized = False
         self.modem_info = None
         #self.modem = serial.Serial(sim_device, 19200, timeout=10)
         self.modem = serial.Serial(port=sim_device, baudrate=115200, bytesize=8, parity='N', stopbits=1, timeout=1)
-
-
-
-        cmd="AT+CREG?\r"
-        writed = self.modem.write(cmd.encode())
-        print(writed)
-
-        response = []
-        read_timeout = 0.1
-        quantity = self.modem.in_waiting 
-        print(quantity)
-        while True:
-            if quantity > 0:
-                text = self.modem.read(quantity).decode().strip()
-                text = text.replace('\r\n', ' ')
-                text = text.replace('\n', '')
-                text = text.replace('\r', '')
-                response.append(text)
-            else:
-                time.sleep(read_timeout) 
-            quantity = self.modem.in_waiting
-            if quantity == 0:
-                break
-                
-        output = ' '.join(response)
-
+        self.ip_addr = None
         logger.debug('Initializing modem...')
         print('Initializing modem...')
         # Test AT commands
@@ -100,15 +86,14 @@ class Modem(object):
         self.initialized = True
         
         # Check if SSL is supported
-        #self.ssl_available = self.execute_at_command('checkssl') == '+CIPSSL: (0-1)'
-        logger.debug('Initializing success')
+        self.ssl_available = self.execute_at_command('checkssl')[0] == '+CIPSSL: (0-1)'
+        print(f'Is SSL available? {self.ssl_available}')
         print('Initializing success')
-
 
     #----------------------
     # Execute AT commands
     #----------------------
-    def execute_at_command(self, command, data=None, clean_output=True):
+    def execute_at_command(self, command, data=None) -> List:
 
         # Commands dictionary. Not the best approach ever, but works nicely.
         commands = {
@@ -131,7 +116,7 @@ class Modem(object):
                     'enablessl':  {'string':'AT+HTTPSSL=1', 'timeout':3, 'end': 'OK'},
                     'disablessl': {'string':'AT+HTTPSSL=0', 'timeout':3, 'end': 'OK'},
                     'initurl':    {'string':'AT+HTTPPARA="URL","{}"'.format(data), 'timeout':3, 'end': 'OK'},
-                    'doget':      {'string':'AT+HTTPACTION=0', 'timeout':3, 'end': '+HTTPACTION'},
+                    'doget':      {'string':'AT+HTTPACTION=0', 'timeout':3, 'end': '+HTTPACTION'},  # AT+HTTPACTION=Method,StatusCode,DataLen
                     'setcontent': {'string':'AT+HTTPPARA="CONTENT","{}"'.format(data), 'timeout':3, 'end': 'OK'},
                     'postlen':    {'string':'AT+HTTPDATA={},5000'.format(data), 'timeout':3, 'end': 'DOWNLOAD'},  # "data" is data_lenght in this context, while 5000 is the timeout
                     'dumpdata':   {'string':data, 'timeout':1, 'end': 'OK'},
@@ -159,30 +144,36 @@ class Modem(object):
 
         # Execute the AT command
         command_string_for_at = f"{command_string}\r"
-        print(f'Writing AT command: {command_string_for_at}')
-
+        #print(f'Writing AT command: {command_string_for_at}')
         writed = self.modem.write(command_string_for_at.encode())
-        print(writed)
 
         response = []
-        read_timeout = 0.1
-        quantity = modem.in_waiting 
+        empty_reads = 0
+        read_timeout = 1
+        quantity = self.modem.in_waiting 
         while True:
             if quantity > 0:
-                text = modem.read(quantity).decode().strip()
-                text = text.replace('\r\n\r\n', ' ')
-                text = text.replace('\r\n', ' ')
-                text = text.replace('\n', '')
-                text = text.replace('\r', '')
+                text = self.modem.read(quantity).decode()
                 response.append(text)
             else:
                 time.sleep(read_timeout) 
-            quantity = modem.in_waiting
+                empty_reads += 1
+                if empty_reads > timeout:
+                    raise Exception('Timeout for command "{}" (timeout={})'.format(command, timeout))
+            quantity = self.modem.in_waiting
             if quantity == 0:
                 break
-        text = ' '.join(response).upper().strip()
-        print(text)
-        return text
+
+        # print(response)
+        # [ERR]   Timeout, couldn't get response
+        output = [line.strip() for line in ' '.join(response).split('\r\n') if line]
+        if output:
+            if output[-1] == 'OK':
+                # the 1st item is the command itself, e.g. for command 'ATI', the output is ['ATI', 'SIM800 R14.18', 'OK']
+                # the last item is "OK", we extract the useful items between them
+                output = output[1:-1]
+        print(f'->{output}')
+        return output
 
 
     #----------------------
@@ -193,67 +184,62 @@ class Modem(object):
         output = self.execute_at_command('modeminfo')
         return output
 
-    def battery_status(self):
-        output = self.execute_at_command('battery')
-        return output
-
-    def scan_networks(self):
-        networks = []
-        output = self.execute_at_command('scan')
-        pieces = output.split('(', 1)[1].split(')')
-        for piece in pieces:
-            piece = piece.replace(',(','')
-            subpieces = piece.split(',')
-            if len(subpieces) != 4:
-                continue
-            networks.append({'name': json.loads(subpieces[1]), 'shortname': json.loads(subpieces[2]), 'id': json.loads(subpieces[3])})
-        return networks
-
-    def get_current_network(self):
-        output = self.execute_at_command('network')
-        network = output.split(',')[-1]
-        if network.startswith('"'):
-            network = network[1:]
-        if network.endswith('"'):
-            network = network[:-1]
-        # If after filtering we did not filter anything: there was no network
-        if network.startswith('+COPS'):
-            return None
-        return network
-
     def get_signal_strength(self):
         # See more at https://m2msupport.net/m2msupport/atcsq-signal-quality/
-        output = self.execute_at_command('signal')
+        output = self.execute_at_command('signal')[0]
         signal = int(output.split(':')[1].split(',')[0])
-        signal_ratio = float(signal)/float(30) # 30 is the maximum value (2 is the minimum)
+        signal_ratio = float(signal) / float(30) # 30 is the maximum value (2 is the minimum)
         return signal_ratio
 
     def get_ip_addr(self):
-        output = self.execute_at_command('getbear')
-        output = output.split('+')[-1] # Remove potential leftovers in the buffer before the "+SAPBR:" response
+        """
+        ['+SAPBR: 1,3,"0.0.0.0"']
+        """
+        outputs = self.execute_at_command('getbear')
+        if not outputs:
+            return None
+        output = outputs[0]
         pieces = output.split(',')
         if len(pieces) != 3:
             raise Exception('Cannot parse "{}" to get an IP address'.format(output))
-        ip_addr = pieces[2].replace('"','')
+
+        ip_addr = pieces[2].replace('"','')  # "0.0.0.0"  -> 0.0.0.0
         if len(ip_addr.split('.')) != 4:
             raise Exception('Cannot parse "{}" to get an IP address'.format(output))
         if ip_addr == '0.0.0.0':
             return None
+        self.ip_addr = ip_addr
         return ip_addr
 
-    def connect(self, apn, user='', pwd=''):
+    def connect(self, apn='fast.t-mobile.com', user='', pwd=''):
         if not self.initialized:
             raise Exception('Modem is not initialized, cannot connect')
 
         # Are we already connected?
-        if self.get_ip_addr():
-            logger.debug('Modem is already connected, not reconnecting.')
+        if self.get_ip_addr() is not None:
+            print(f'Modem is already connected with ip {self.ip_addr}, not reconnecting.')
             return
 
         # Closing bearer if left opened from a previous connect gone wrong:
-        logger.debug('Trying to close the bearer in case it was left open somehow..')
+        print('Trying to close the bearer in case it was left open somehow..')
         try:
-76        # Ok, now wait until we get a valid IP address
+            self.execute_at_command('closebear')
+        except GenericATError:
+            print('Failed to close connection')
+
+        # First, init gprs
+        print('Connect step #1 (initgprs)')
+        self.execute_at_command('initgprs')
+
+        # Second, set the APN
+        print('Connect step #2 (setapn)')
+        self.execute_at_command('setapn', apn)
+
+        # Then, open the GPRS connection.
+        print('Connect step #3 (opengprs)')
+        self.execute_at_command('opengprs')
+
+        # Ok, now wait until we get a valid IP address
         retries = 0
         max_retries = 5
         while True:
@@ -263,10 +249,11 @@ class Modem(object):
                 retries += 1
                 if retries > max_retries:
                     raise Exception('Cannot connect modem as could not get a valid IP address')
-                logger.debug('No valid IP address yet, retrying... (#')
+                print('No valid IP address yet, retrying... (#')
                 time.sleep(1)
             else:
                 break
+        print(f'Connected, ip: {self.ip_addr}')
 
     def disconnect(self):
 
@@ -279,8 +266,8 @@ class Modem(object):
         # Check that we are actually disconnected
         ip_addr = self.get_ip_addr()
         if ip_addr:
-            raise Exception('Error, we should be disconnected but we still have an IP address ({})'.format(ip_addr))
-
+            raise Exception(f'Error, we should be disconnected but we still have an IP address ({ip_addr})')
+        print('Disconnected')
 
     def http_request(self, url, mode='GET', data=None, content_type='application/json'):
 
@@ -292,69 +279,72 @@ class Modem(object):
             raise Exception('Error, modem is not connected')
 
         # Close the http context if left open somehow
-        logger.debug('Close the http context if left open somehow...')
+        print('Close the http context if left open somehow...')
         try:
             self.execute_at_command('closehttp')
         except GenericATError:
             pass
 
         # First, init and set http
-        logger.debug('Http request step #1.1 (inithttp)')
+        print('Http request step #1.1 (inithttp)')
         self.execute_at_command('inithttp')
-        logger.debug('Http request step #1.2 (sethttp)')
+
+
+        print('Http request step #1.2 (sethttp)')
         self.execute_at_command('sethttp')
 
         # Do we have to enable ssl as well?
         if self.ssl_available:
             if url.startswith('https://'):
-                logger.debug('Http request step #1.3 (enablessl)')
+                print('Http request step #1.3 (enablessl)')
                 self.execute_at_command('enablessl')
             elif url.startswith('http://'):
-                logger.debug('Http request step #1.3 (disablessl)')
+                print('Http request step #1.3 (disablessl)')
                 self.execute_at_command('disablessl')
         else:
             if url.startswith('https://'):
                 raise NotImplementedError("SSL is only supported by firmware revisions >= R14.00")
 
         # Second, init and execute the request
-        logger.debug('Http request step #2.1 (initurl)')
+        # AT+HTTPPARA="URL","http://www.google.com"
+        print('Http request step #2.1 (initurl)')
         self.execute_at_command('initurl', data=url)
 
         if mode == 'GET':
 
-            logger.debug('Http request step #2.2 (doget)')
+            print('Http request step #2.2 (doget) -> AT+HTTPACTION=0')
             output = self.execute_at_command('doget')
-            response_status_code = output.split(',')[1]
-            logger.debug('Response status code: "{}"'.format(response_status_code))
+            #response_status_code = output.split(',')[1]
+            #print('Response status code: "{}"'.format(response_status_code))
 
         elif mode == 'POST':
 
-            logger.debug('Http request step #2.2 (setcontent)')
+            print('Http request step #2.2 (setcontent)')
             self.execute_at_command('setcontent', content_type)
 
-            logger.debug('Http request step #2.3 (postlen)')
+            print('Http request step #2.3 (postlen)')
             self.execute_at_command('postlen', len(data))
 
-            logger.debug('Http request step #2.4 (dumpdata)')
+            print('Http request step #2.4 (dumpdata)')
             self.execute_at_command('dumpdata', data)
 
-            logger.debug('Http request step #2.5 (dopost)')
-            output = self.execute_at_command('dopost')
+            print('Http request step #2.5 (dopost)')
+            output = self.execute_at_command('dopost')[0]
             response_status_code = output.split(',')[1]
-            logger.debug('Response status code: "{}"'.format(response_status_code))
+            print('Response status code: "{}"'.format(response_status_code))
 
 
         else:
             raise Exception('Unknown mode "{}'.format(mode))
 
         # Third, get data
-        logger.debug('Http request step #4 (getdata)')
-        response_content = self.execute_at_command('getdata', clean_output=False)
+        print('Http request step #4 (getdata)')
+        response_content = self.execute_at_command('getdata')[0]
 
-        logger.debug(response_content)
+        print(response_content)
 
         # Then, close the http context
-        logger.debug('Http request step #4 (closehttp)')
+        print('Http request step #4 (closehttp)')
         self.execute_at_command('closehttp')
 
         return Response(status_code=response_status_code, content=response_content)
