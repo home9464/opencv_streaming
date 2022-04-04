@@ -35,3 +35,10 @@ async def getInformation(info : Request):
     req_info = await info.json()
     print(req_info)
     return { "status" : "SUCCESS" }
+
+@app.get("/")
+async def root():
+    """
+    curl -H 'Content-Type: application/json' -X GET 10.0.0.4:8080
+    """
+    return {"message": "Hello World"}

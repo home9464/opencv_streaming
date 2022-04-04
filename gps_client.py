@@ -18,10 +18,15 @@ print(r.content)
 
 #gsm.sms.send("1234567890","hi there")
 
+#gsm.sms.send("6502418790","hi there")
+
 data = {
     "lon": 123.456,
     "lat":234.567
 }
+
+
+gsm.requests.get(url="http://10.0.0.4:8080")
 
 # use WiFi
 requests.post('http://10.0.0.4:8080/locations', json=data)
