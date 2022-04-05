@@ -43,7 +43,7 @@ assert sys.version_info >= (3, 5, 2)  # for reader.readuntil
 FRAME_SEPARATOR = b'\xc3\xbf\x00\x00\x00\xc3\xbf\x00\x00\x00\xc3\xbf'
 SEPARATOR_LENGTH = len(FRAME_SEPARATOR)
 
-SERVER_IP = '10.0.0.4'
+SERVER_IP = '10.0.0.9'
 SERVER_PORT = 8888
 
 WRITE_VIDEO_TO_FILE = True
@@ -54,7 +54,7 @@ VIDEO_CLIP_LENGTH_MINUTES = 60  # generate a new file every VIDEO_CLIP_LENGTH_MI
 DISPLAY_VIDEO = False
 
 # max number of video files to be saved, 5 days. 120 = 24*5, if a video file is 1 hr long
-MAX_NUM_VIDEOS_ROTATION = 120
+MAX_NUM_VIDEOS_ROTATION = 60
 
 
 def refresh_video_file(video_width:int=1280, video_height:int=720) -> cv2.VideoWriter:

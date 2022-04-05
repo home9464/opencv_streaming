@@ -38,7 +38,7 @@ assert sys.version_info >= (3, 5, 2)
 FRAME_SEPARATOR = b'\xc3\xbf\x00\x00\x00\xc3\xbf\x00\x00\x00\xc3\xbf'
 
 # send video stream to this server
-SERVER_IP = '10.0.0.4'
+SERVER_IP = '10.0.0.9'
 SERVER_PORT = 8888
 
 # only capture videos during night (8pm to 8am)
