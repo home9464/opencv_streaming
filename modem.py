@@ -11,20 +11,20 @@ aa AT+SAPBR=1,1  # open a GPRS context
 aa AT+SAPBR=2,1  # query GPRS context
 
 # HTTP GET
-AT+HTTPINIT
-AT+HTTPPARA="CID",1
-AT+HTTPPARA="URL","http://10.0.0.4:8080"
-AT+HTTPACTION=0  #expect "+HTTPACTION: 0, 200, 100
-AT+HTTPREAD # read the data
-AT+HTTPTERM
-AT+SAPBR=0,1  # close GPRS context
+aa AT+HTTPINIT
+aa AT+HTTPPARA="CID",1
+aa AT+HTTPPARA="URL","http://10.0.0.4:8080"
+aa AT+HTTPACTION=0  #expect "+HTTPACTION: 0, 200, 100
+aa AT+HTTPREAD # read the data
+aa AT+HTTPTERM
+aa AT+SAPBR=0,1  # close GPRS context
 
 # HTTP POST
 AT+HTTPINIT
 AT+HTTPPARA="CID",1
-AT+HTTPPARA="URL","http://www.1genomics.com"
-AT+HTTPDATA=100, 10000 # 100 byte input, 10000 ms latency for input
-AT+HTTPACTION=1
+AT+HTTPPARA="URL","http://10.0.0.4:8080"
+aa AT+HTTPDATA=1,3000 # 100 byte input, 10000 ms latency for input
+aa AT+HTTPACTION=1
 AT+HTTPTERM
 AT+SAPBR=0,1  # close GPRS context
 """

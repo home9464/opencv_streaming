@@ -6,7 +6,7 @@ uvicorn gps_server:app --host 0.0.0.0 --port 8080 --reload
 
 
 # client
-curl -H 'Content-Type: application/json' -d '{"lon": 123.456, "lat":234.567}' -X POST 10.0.0.4:8080/locations
+curl -H 'Content-Type: application/json' -d '{"lon": 123.456, "lat":234.567}' -X POST 10.0.0.4:8080
 """
 
 from fastapi import FastAPI, Request
@@ -29,9 +29,11 @@ async def entry(loc: GpsLocation):
 """
 
 @app.post("/")
-async def getInformation(info : Request):
-    req_info = await info.json()
-    print(req_info)
+#async def getInformation(info : Request):
+async def getInformation():
+    #req_info = await info.json()
+    #print(req_info)
+    print('OK')
     return { "status" : "SUCCESS" }
 
 @app.get("/")
