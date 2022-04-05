@@ -2,17 +2,31 @@
 """
 https://github.com/pythings/Drivers/blob/master/SIM800L.py
 
+https://cdn-shop.adafruit.com/datasheets/sim800_series_ip_application_note_v1.00.pdf
+
+# Bearer Config
 AT+SAPBR=3,1,"CONTYPE","GPRS"
-AT+SAPBR=3,1,"APN","internet"
-AT+SAPBR=3,1,"USER","ooredoo"
-AT+SAPBR=3,1,"PWD","ooredoo"
-AT+SAPBR=1,1
-AT+SAPBR=2,1
+AT+SAPBR=3,1,"APN","fast.t-mobile.com"
+AT+SAPBR=1,1  # open a GPRS context
+AT+SAPBR=2,1  # query GPRS context
+
+# HTTP GET
+AT+HTTPINIT
+AT+HTTPPARA="CID",1
+AT+HTTPPARA="URL","http://10.0.0.4:8080"
+AT+HTTPACTION=0  #expect "+HTTPACTION: 0, 200, 100
+AT+HTTPREAD # read the data
+AT+HTTPTERM
+AT+SAPBR=0,1  # close GPRS context
+
+# HTTP POST
 AT+HTTPINIT
 AT+HTTPPARA="CID",1
 AT+HTTPPARA="URL","http://www.1genomics.com"
-AT+HTTPACTION=0
-
+AT+HTTPDATA=100, 10000 # 100 byte input, 10000 ms latency for input
+AT+HTTPACTION=1
+AT+HTTPTERM
+AT+SAPBR=0,1  # close GPRS context
 """
 
 # Imports
