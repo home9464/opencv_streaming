@@ -5,10 +5,10 @@ https://github.com/pythings/Drivers/blob/master/SIM800L.py
 https://cdn-shop.adafruit.com/datasheets/sim800_series_ip_application_note_v1.00.pdf
 
 # Bearer Config
-AT+SAPBR=3,1,"CONTYPE","GPRS"
-AT+SAPBR=3,1,"APN","fast.t-mobile.com"
-AT+SAPBR=1,1  # open a GPRS context
-AT+SAPBR=2,1  # query GPRS context
+aa AT+SAPBR=3,1,"CONTYPE","GPRS"
+aa AT+SAPBR=3,1,"APN","fast.t-mobile.com"
+aa AT+SAPBR=1,1  # open a GPRS context
+aa AT+SAPBR=2,1  # query GPRS context
 
 # HTTP GET
 AT+HTTPINIT
