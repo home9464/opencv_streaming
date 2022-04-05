@@ -28,7 +28,7 @@ async def entry(loc: GpsLocation):
     return 'Accepted'
 """
 
-@app.post("/locations")
+@app.post("/")
 async def getInformation(info : Request):
     req_info = await info.json()
     print(req_info)
