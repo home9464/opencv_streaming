@@ -83,7 +83,8 @@ async def client_camera(video_width=1280,
             _, frame = cap.read()
             if video_color_gray:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            frame = cv2.flip(frame, 0)  # remove this line if image is upside down
+            #frame = cv2.flip(frame, 0)  # vertical flip
+            frame = cv2.flip(frame, -1)  # flip both horizontally and vetically 
             _, buffer = cv2.imencode('.jpg', frame)
             data = buffer.tostring()  # class 'bytes'
             writer.write(data)
