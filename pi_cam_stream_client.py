@@ -25,10 +25,12 @@ sudo raspi-config
 ```
 
 """
+import os
 import sys
 import time
 import asyncio
 import datetime
+import socket
 
 import cv2
 
@@ -43,6 +45,21 @@ SERVER_PORT = 8888
 
 # only capture videos during night (8pm to 8am)
 CAPTURE_HOURS = set([20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7, 8])
+
+def internet_connected(host="8.8.8.8", port=53, timeout=3):
+    """
+    Host: 8.8.8.8 (google-public-dns-a.google.com)
+    OpenPort: 53/tcp
+    Service: domain (DNS/TCP)
+    """
+    try:
+        socket.setdefaulttimeout(timeout)
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
+        return True
+    except socket.error as ex:
+        print(ex)
+        return False
+
 
 async def connect_server() -> None:
     """connect to server
@@ -73,8 +90,13 @@ async def client_camera(video_width=1280,
     cap.set(4, video_height)  # height, max 2464
     cap.set(5, 24)  # Frame Per Second
 
+    start_time = time.time()
     while True:
         try:
+            if int(time.time() - start_time) % 60 == 0:  # every minute check out if internet connection OK
+                if not internet_connected():
+                    os.system('sudo reboot')
+
             hour = datetime.datetime.now().hour
             if hour not in CAPTURE_HOURS:  # only capture video within CAPTURE_HOURS
                 time_seconds_to_sleep = int(20 - hour) * 3600  # 20 is '8pm'
@@ -102,6 +124,11 @@ async def client_camera(video_width=1280,
     print('Close the connection')
     writer.close()
     await writer.wait_closed()
+
+
+
+
+
 
 if __name__ == '__main__':
     asyncio.run(client_camera())
