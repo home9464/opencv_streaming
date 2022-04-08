@@ -95,6 +95,7 @@ async def client_camera(video_width=1280,
         try:
             if int(time.time() - start_time) % 60 == 0:  # every minute check out if internet connection OK
                 if not internet_connected():
+                    time.sleep(60)  # wait for a minute
                     os.system('sudo reboot')
 
             hour = datetime.datetime.now().hour
