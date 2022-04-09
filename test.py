@@ -10,15 +10,19 @@ add line :
 <user> ALL=(root) NOPASSWD: /sbin/reboot
 
 """
+import logging
 
-import os
-import time
+logging.basicConfig(filename='default.log',
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.DEBUG)
 
-start_time = time.time()
-while True:
-    if int(time.time() - start_time) % 10 == 0:  # every minute check out if internet connection OK
-        print('reboot')
-        os.system('sudo reboot')
-    print('alive')
-    time.sleep(1)
+LOG = logging.getLogger('pi_cam_client')
+
+logging.info("info Urban Planning")
+
+logging.debug("debug Urban Planning")
+
+
 
