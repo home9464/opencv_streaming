@@ -43,7 +43,7 @@ assert sys.version_info >= (3, 5, 2)  # for reader.readuntil
 FRAME_SEPARATOR = b'\xc3\xbf\x00\x00\x00\xc3\xbf\x00\x00\x00\xc3\xbf'
 SEPARATOR_LENGTH = len(FRAME_SEPARATOR)
 
-SERVER_IP = '10.0.0.9'
+SERVER_IP = '10.0.0.99'
 SERVER_PORT = 8888
 
 WRITE_VIDEO_TO_FILE = True
